@@ -1,0 +1,52 @@
+<template>
+    <article class="slds-card">
+        <header class="slds-card__header slds-grid">
+            <div class="slds-media slds-media_center slds-has-flexi-truncate slds-m-vertical_small">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="doctype:attachment" alternative-text="attachment" size="medium">
+                    </lightning-icon>
+                </div>
+                <div class="slds-media__body slds-truncate">
+                    <h2 class="slds-text-heading_medium">
+                        {title}
+                    </h2>
+                    <span class="slds-text_small">
+                        drag your files here!
+                    </span>
+                </div>
+            </div>
+
+        </header>
+        <div class="slds-card__body">
+
+            <div class="drop-zone">
+                <div data-id="dropZoneContextId" class={dropZoneContextClass}>
+                    <div data-id="droparea" class="slds-align_absolute-center" style="width:100%;height:10rem">
+                        <div class=""><b>Choose files </b> or drag here</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- <lightning-input label=" " name="file to uploder" type="file" multiple
+                onchange={handleSelectedFiles}></lightning-input>-->
+                
+            <div class="slds-text-body_small">{fileName}
+            </div>
+            <template if:true={showSpinner}>
+                <lightning-spinner alternative-text="Uploading the file......" size="medium">
+                </lightning-spinner>
+            </template>
+        </div>
+        <footer>
+            <ul class="slds-button-group-row slds-align_absolute-center slds-m-vertical_small">
+                <li class="slds-button-group-item">
+                    <button class="slds-button slds-button_brand slds-button-large"
+                        onclick={handleFileUpload}>Submit</button>
+                </li>
+                <li class="slds-button-group-item">
+                    <button class="slds-button slds-button_neutral">Cancel</button>
+                </li>
+            </ul>
+        </footer>
+    </article>
+</template>

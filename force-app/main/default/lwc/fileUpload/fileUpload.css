@@ -1,0 +1,38 @@
+article{
+
+    padding: 1rem;
+}
+
+h2{
+    font-weight: bold;
+}
+
+.drop-zone{
+
+    background-color: lightgray;
+}
+
+.active{
+
+    border: 3px solid green;
+}
+
+.inactive{
+
+    border: 1px dotted grey;
+}
+
+.inactive:hover{
+
+    border: 1px solid grey;
+}
+
+header {
+
+    border-bottom: 1px solid lightgray;
+}
+
+footer{
+
+    border-top: 1px solid lightgray;
+}
