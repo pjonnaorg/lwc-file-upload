@@ -1,4 +1,4 @@
-public with sharing class SalesforceFileUpload implements FileUploadController  {
+public with sharing class SalesforceFileUpload   {
     
     
     @AuraEnabled
@@ -7,7 +7,8 @@ public with sharing class SalesforceFileUpload implements FileUploadController  
         Attachment att = new Attachment();
         att.ParentId = parentId;
         att.Name = strfileName;
-        att.Body=Blob.valueOf(fileContent);
+        att.ContentType = fileType;
+        att.Body=  EncodingUtil.base64Decode(EncodingUtil.urlDecode(fileContent, 'UTF-8'));
         Insert att;
 
         return true;

@@ -9,7 +9,7 @@ h2{
 
 .drop-zone{
 
-    background-color: lightgray;
+    background-color: rgb(243, 243, 243);
 }
 
 .active{
@@ -19,7 +19,7 @@ h2{
 
 .inactive{
 
-    border: 1px dotted grey;
+    border: 2px dashed rgb(158, 158, 158);
 }
 
 .inactive:hover{
