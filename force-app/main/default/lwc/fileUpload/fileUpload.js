@@ -2,6 +2,7 @@ import { LightningElement, api, track } from 'lwc';
 import { isNarrow, proto, isBase } from './fileUploadUtil';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import uploadFile from '@salesforce/apex/FileUploadController.uploadFile';
+import uploadFileInChunk from '@salesforce/apex/FileUploadController.uploadFileInChunk';
 //import displayUploadedFiles from '@salesforce/apex/AWSFileUploadController.displayUploadedFiles'; 
 
 export default class FileUpload extends LightningElement {
@@ -10,24 +11,20 @@ export default class FileUpload extends LightningElement {
     @api recordId; //get the recordId for which files will be attached
     @api iconName;
 
-    @track isActive = false;
+    dragZoneActive = false;
     @track privateVariant = 'base';
 
-    selectedFilesToUpload = []; //store selected files
+    @track selectedFilesToUpload = []; //store selected files
     @track showSpinner = false; //used for when to show spinner
-    @track fileName; //to display the selected file name
-    @track tableData; //to display the uploaded file and link to AWS
-    
-    file; //holding file instance
-    myFile;
-    fileType;//holding file type
-    fileReaderObj;
-    base64FileData;
-    files;
+
+    MAX_FILE_SIZE = 4500000; //Max file size 4.5 MB
+    CHUNK_SIZE = 750000;      //Chunk Max size 750Kb  
+
+    errorMessage;
+    eventListenersAdded;
 
     constructor() {
         super();
-        console.log('constructor');
     }
 
     connectedCallback() {
@@ -39,13 +36,18 @@ export default class FileUpload extends LightningElement {
     };
 
     renderedCallback() {
+
+        if (this.eventListenersAdded) {
+            return;
+        }
+
+        this.eventListenersAdded = true;
         this.registerEvents();
     };
 
     get dropZoneContextClass() {
-        console.log(this.isActive);
-        return this.isActive ? 'active': 'inactive';
-      }
+        return this.dragZoneActive ? 'active' : 'inactive';
+    }
 
     get computedWrapperClassNames() {
 
@@ -61,127 +63,181 @@ export default class FileUpload extends LightningElement {
         });
     };
 
+    handleOpenDialog = (event) => {
+        this.template.querySelector('[data-id="ChooseFiles"]').click();
+    }
+
     // get the file name from the user's selection
     handleSelectedFiles = (event) => {
-        
 
-        if (event.target.files.length > 0) {
-            this.selectedFilesToUpload = event.target.files;
-            this.fileName = this.selectedFilesToUpload[0].name;
-            this.fileType = this.selectedFilesToUpload[0].type;
-            console.log('fileName=' + this.fileName);
-            console.log('fileType=' + this.fileType);
-        }
+        let files = this.template.querySelector('[data-id="ChooseFiles"]').files;
+        this.processAllFiles(files);
     };
 
     handleFileUpload = (event) => {
-        this.isActive = true;
+
         if (this.selectedFilesToUpload.length > 0) {
+            this.errorMessage = null;
             this.showSpinner = true;
 
-            this.file = this.selectedFilesToUpload[0];
-            //create an intance of File
-            this.fileReaderObj = new FileReader();
-
-            //this callback function in for fileReaderObj.readAsDataURL
-            this.fileReaderObj.onloadend = (() => {
-                //get the uploaded file in base64 format
-                let fileContents = this.fileReaderObj.result;
-                fileContents = fileContents.substr(fileContents.indexOf(',') + 1)
-
-                //read the file chunkwise
-                let sliceSize = 1024;
-                let byteCharacters = atob(fileContents);
-                let bytesLength = byteCharacters.length;
-                let slicesCount = Math.ceil(bytesLength / sliceSize);
-                let byteArrays = new Array(slicesCount);
-                for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
-                    let begin = sliceIndex * sliceSize;
-                    let end = Math.min(begin + sliceSize, bytesLength);
-                    let bytes = new Array(end - begin);
-                    for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
-                        bytes[i] = byteCharacters[offset].charCodeAt(0);
-                    }
-                    byteArrays[sliceIndex] = new Uint8Array(bytes);
-                }
-
-                //from arraybuffer create a File instance
-                this.myFile = new File(byteArrays, this.fileName, { type: this.fileType });
-
-                //callback for final base64 String format
-                let reader = new FileReader();
-                reader.onloadend = (() => {
-                    let base64data = reader.result;
-                    this.base64FileData = base64data.substr(base64data.indexOf(',') + 1);
-                    this.fileUpload();
-                });
-                reader.readAsDataURL(this.myFile);
+            this.selectedFilesToUpload.forEach(file => {
+                if( file.stateIconText == "upload" ||  file.stateIconText == "error"){
+                    this.processSingleFile(file);
+                }   
             });
-            this.fileReaderObj.readAsDataURL(this.file);
         }
         else {
-            this.fileName = 'Please select a file to upload!';
+            this.errorMessage = 'Please select a file to upload!';
         }
     };
 
-    //this method calls Apex's controller to upload file in AWS
-    fileUpload = () => {
+    handleCancel = (event) => {
+        this.errorMessage = null;
+        this.selectedFilesToUpload = [];
+        this.showSpinner = false;
+    }
 
+    processSingleFile = (file) => {
+
+        console.log( `File size cannot exceed ${this.MAX_FILE_SIZE} bytes. Selected file size: ${file.size}`);
+        if (file.size > this.MAX_FILE_SIZE) {
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'File size exceeded',
+                    message: `File size cannot exceed ${this.MAX_FILE_SIZE} bytes. Selected file size: ${file.size}`,
+                    variant: 'error',
+                })
+            );
+            this.updateFileStatus(file, false);
+            return;
+        }
+
+        //create an intance of File
+        let fileReaderObj = new FileReader();
+        fileReaderObj.onloadend = (() => {
+
+            let fileContents = fileReaderObj.result;
+            let base64 = 'base64,';
+            let dataStart = fileContents.indexOf(base64) + base64.length;
+
+            fileContents = fileContents.substring(dataStart);
+            this.fileUpload(file, fileContents);
+
+        });
+        fileReaderObj.readAsDataURL(file);
+
+    };
+
+    //this method calls Apex's controller to upload file in AWS
+    fileUpload = (file, fileContents) => {
+
+        // set a default size or startpostiton as 0 
+        let startPosition = 0;
+        // calculate the end size or endPostion using Math.min() function which is return the min. value   
+        let endPosition = Math.min(fileContents.length, startPosition + this.CHUNK_SIZE);
+
+        // start with the initial chunk, and set the attachId(last parameter)is null in begin
+        this.fileUploadInChunks(file, fileContents, startPosition, endPosition, '');
+    };
+
+    fileUploadInChunks = (file, fileContent, startPosition, endPosition, salesforceFileId) => {
+
+        let getchunk = fileContent.substring(startPosition, endPosition);
         //implicit call to apex
-        uploadFile({
+        uploadFileInChunk({
             parentId: this.recordId,
-            strfileName: this.file.name,
-            fileType: this.file.type,
-            fileContent: encodeURIComponent(this.base64FileData)
+            fileName: file.name,
+            contentType: file.type,
+            fileContent: encodeURIComponent(getchunk),
+            fileId: salesforceFileId
         }).then(result => {
-                console.log('Upload result = ' + result);
-                this.fileName = this.fileName + ' - Uploaded Successfully';
-                //call to show uploaded files
-                //this.getUploadedFiles(); 
-                this.showSpinner = false;
+            console.log(result);
+            salesforceFileId = result;
+            startPosition = endPosition;
+            endPosition = Math.min(fileContent.length, startPosition + this.CHUNK_SIZE);
+            if (startPosition < endPosition) {
+                this.fileUploadInChunks(file, fileContent, startPosition, endPosition, salesforceFileId);
+            } else {
+                this.updateFileStatus(file, true);
                 // Showing Success message after uploading
                 this.dispatchEvent(
                     new ShowToastEvent({
                         title: 'Success!!',
-                        message: this.file.name + ' - Uploaded Successfully!!!',
+                        message: file.name + ' - Uploaded Successfully!!!',
                         variant: 'success',
                     }),
                 );
-            }).catch(error => {
-                // Error to show during upload
-                window.console.log(error);
-                this.dispatchEvent(
-                    new ShowToastEvent({
-                        title: 'Error in uploading File',
-                        message: error.message,
-                        variant: 'error',
-                    })
-                );
-                this.showSpinner = false;
-            });
-    };
+            }
+        }).catch(error => {
+            // Error to show during upload
+            window.console.log(error);
+            console.log(error.message);
+            this.updateFileStatus(file, false);
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Error in uploading File',
+                    message: error.message,
+                    variant: 'error',
+                })
+            );
+        });
+    }
 
-    registerEvents2 = () => {
 
-        //let dropArea = this.template.querySelector('[data-id="droparea"]').innerHTML;
-        console.log(this.template);
-        //console.log(dropArea);
+    fileUploadInChunksOld = (file, base64FileData, startPosition, endPosition, salesforceFileId) => {
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            this.template.addEventListener(eventName, this.preventDefaults)
+        //implicit call to apex
+        uploadFile({
+            parentId: this.recordId,
+            strfileName: file.name,
+            fileType: file.type,
+            fileContent: encodeURIComponent(base64FileData)
+        }).then(result => {
+            console.log('Upload result = ' + result);
+            this.updateFileStatus(file, true);
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Success!!',
+                    message: file.name + ' - Uploaded Successfully!!!',
+                    variant: 'success',
+                }),
+            );
+        }).catch(error => {
+            window.console.log(error);
+            this.updateFileStatus(file, false);
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Error in uploading File',
+                    message: error.message,
+                    variant: 'error',
+                })
+            );
+        });
+    }
+
+    updateFileStatus = (file, completed) => {
+
+        let workInProgress = false;
+        this.selectedFilesToUpload.forEach(item => {
+
+            if (item.name == file.name) {
+                item.stateIconClass = completed ? "utility:success" : "utility:error";
+                item.stateIconText = completed ? 'success' : 'error';
+            }
+
+            if(item.stateIconText == 'upload'){
+                workInProgress = true;
+            }
+
         });
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            this.template.addEventListener(eventName, this.highlight)
-        });
+        this.showSpinner = workInProgress ? true: false;
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            this.template.addEventListener(eventName, this.unhighlight)
-        });
-
-        this.template.addEventListener('drop', this.handleDrop);
-
-    };
+        //lwc track needs array push or reset to track property changes
+        let temp = this.selectedFilesToUpload;
+        this.selectedFilesToUpload = [];
+        this.selectedFilesToUpload = temp;
+    }
 
     registerEvents = () => {
 
@@ -204,24 +260,17 @@ export default class FileUpload extends LightningElement {
 
     };
 
-    highlight(e) {
-        this.isActive = true;
-        console.log("inside hightlight");
+    highlight = (e) => {
+        this.dragZoneActive = true;
     };
 
-    unhighlight(e) {
-        //this.isActive = false;
-        //console.log("inside unhighlight");
+    unhighlight = (e) => {
+        this.dragZoneActive = false;
     };
 
     handleDrop = (e) => {
-        this.isActive = true;
-        console.log(this.dropZoneContextClass());
-        //this.template.querySelector('[data-id="dropZoneContextId"]').className='active';
-        console.log("inside hightlight");
         let dt = e.dataTransfer;
-        this.files = dt.files;
-        this.processAllFiles();
+        this.processAllFiles(dt.files);
     };
 
     preventDefaults = (e) => {
@@ -229,13 +278,19 @@ export default class FileUpload extends LightningElement {
         e.stopPropagation();
     };
 
-    processAllFiles = () => {
+    processAllFiles = (files) => {
 
-        console.log(this.files);
-        this.selectedFilesToUpload = this.files;
-        this.fileName = this.selectedFilesToUpload[0].name;
-        this.fileType = this.selectedFilesToUpload[0].type;
-        
+        let fileBuffer = [];
+        Array.prototype.push.apply(fileBuffer, files);
+        console.log(fileBuffer);
+        fileBuffer.forEach(item => {
+
+            let file = item;
+            file.stateIconClass = 'utility:upload';
+            file.stateIconText = 'upload';
+            this.selectedFilesToUpload.push(file);
+        });
+
     };
 
 }

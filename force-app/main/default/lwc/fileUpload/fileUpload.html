@@ -11,7 +11,7 @@
                         {title}
                     </h2>
                     <span class="slds-text_small">
-                        drag your files here!
+                        Choose or drag files from your device to upload!
                     </span>
                 </div>
             </div>
@@ -22,16 +22,25 @@
             <div class="drop-zone">
                 <div data-id="dropZoneContextId" class={dropZoneContextClass}>
                     <div data-id="droparea" class="slds-align_absolute-center" style="width:100%;height:10rem">
-                        <div class=""><b>Choose files </b> or drag here</div>
+                        <div class=""><b><span onclick={handleOpenDialog}>Choose files</span></b> or drag here</div>
                     </div>
                 </div>
             </div>
-
-            <!-- <lightning-input label=" " name="file to uploder" type="file" multiple
-                onchange={handleSelectedFiles}></lightning-input>-->
-                
-            <div class="slds-text-body_small">{fileName}
-            </div>
+            <input type="file" data-id="ChooseFiles" name="file to uploder" multiple style="display: none;" onchange={handleSelectedFiles}>
+            <ul class="slds-m-around_medium">
+                <template for:each={selectedFilesToUpload} for:item="file">
+                    <li key={file.name} class="slds-p-top_xx-small">
+                        <lightning-icon icon-name={file.stateIconClass} alternative-text={file.stateIconText} size="xx-small" class="slds-m-right_x-small"></lightning-icon>                             
+                        {file.name}  
+                        <!-- <template if:true={showSpinner}>
+                            <span style="display: inline-block;position:relative;width:30px;height:8px;" class="slds-m-right_small"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></span>
+                        </template>          -->
+                    </li>
+                </template>
+            </ul>
+            <template if:true={errorMessage}>
+               <div class="slds-m-around_medium">{errorMessage}</div> 
+            </template>
             <template if:true={showSpinner}>
                 <lightning-spinner alternative-text="Uploading the file......" size="medium">
                 </lightning-spinner>
@@ -41,10 +50,10 @@
             <ul class="slds-button-group-row slds-align_absolute-center slds-m-vertical_small">
                 <li class="slds-button-group-item">
                     <button class="slds-button slds-button_brand slds-button-large"
-                        onclick={handleFileUpload}>Submit</button>
+                        onclick={handleFileUpload}>Upload</button>
                 </li>
                 <li class="slds-button-group-item">
-                    <button class="slds-button slds-button_neutral">Cancel</button>
+                    <button class="slds-button slds-button_neutral" onclick={handleCancel}>Cancel</button>
                 </li>
             </ul>
         </footer>
