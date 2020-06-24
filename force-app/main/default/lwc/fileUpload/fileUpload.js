@@ -2,14 +2,19 @@ import { LightningElement, api, track } from 'lwc';
 import { isNarrow, proto, isBase } from './fileUploadUtil';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import uploadFile from '@salesforce/apex/FileUploadController.uploadFile';
-import uploadFileInChunk from '@salesforce/apex/FileUploadController.uploadFileInChunk';
+import uploadFileInChunks from '@salesforce/apex/FileUploadController.uploadFileInChunks';
 //import displayUploadedFiles from '@salesforce/apex/AWSFileUploadController.displayUploadedFiles'; 
 
 export default class FileUpload extends LightningElement {
 
     @api title;
+    @api subTitle;
     @api recordId; //get the recordId for which files will be attached
+    @api parentRecordId;
     @api iconName;
+    @api controllerName;
+    @api maxFileSize ; //Max file size 4.5 MB
+    @api chunkSize;      //Chunk Max size 750Kb  
 
     dragZoneActive = false;
     @track privateVariant = 'base';
@@ -17,8 +22,6 @@ export default class FileUpload extends LightningElement {
     @track selectedFilesToUpload = []; //store selected files
     @track showSpinner = false; //used for when to show spinner
 
-    MAX_FILE_SIZE = 4500000; //Max file size 4.5 MB
-    CHUNK_SIZE = 750000;      //Chunk Max size 750Kb  
 
     errorMessage;
     eventListenersAdded;
@@ -31,6 +34,23 @@ export default class FileUpload extends LightningElement {
 
         if (!this.title) {
             this.title = 'Upload Files';
+        }
+
+        if(!this.subTitle){
+            this.subTitle = 'Choose or drag files from your device to upload';
+        }
+
+        if(!this.maxFileSize){
+            this.maxFileSize = 4500000;
+        }
+
+        if(!this.chunkSize){
+            this.chunkSize = 750000;
+        }
+
+        console.log(this.parentRecordId);
+        if(this.parentRecordId){
+            this.recordId = this.parentRecordId;
         }
 
     };
@@ -99,12 +119,12 @@ export default class FileUpload extends LightningElement {
 
     processSingleFile = (file) => {
 
-        console.log( `File size cannot exceed ${this.MAX_FILE_SIZE} bytes. Selected file size: ${file.size}`);
-        if (file.size > this.MAX_FILE_SIZE) {
+        console.log( `File size cannot exceed ${this.maxFileSize} bytes. Selected file size: ${file.size}`);
+        if (file.size > this.maxFileSize) {
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'File size exceeded',
-                    message: `File size cannot exceed ${this.MAX_FILE_SIZE} bytes. Selected file size: ${file.size}`,
+                    message: `File size cannot exceed ${this.maxFileSize} bytes. Selected file size: ${file.size}`,
                     variant: 'error',
                 })
             );
@@ -134,29 +154,34 @@ export default class FileUpload extends LightningElement {
         // set a default size or startpostiton as 0 
         let startPosition = 0;
         // calculate the end size or endPostion using Math.min() function which is return the min. value   
-        let endPosition = Math.min(fileContents.length, startPosition + this.CHUNK_SIZE);
+        let endPosition = Math.min(fileContents.length, startPosition + this.chunkSize);
+
+        let isFinalChunk = fileContents.length == endPosition ? true: false;
 
         // start with the initial chunk, and set the attachId(last parameter)is null in begin
-        this.fileUploadInChunks(file, fileContents, startPosition, endPosition, '');
+        this.fileUploadInChunks(file, fileContents, startPosition, endPosition, '',isFinalChunk);
     };
 
-    fileUploadInChunks = (file, fileContent, startPosition, endPosition, salesforceFileId) => {
+    fileUploadInChunks = (file, fileContent, startPosition, endPosition, salesforceFileId, finalChunk) => {
 
         let getchunk = fileContent.substring(startPosition, endPosition);
         //implicit call to apex
-        uploadFileInChunk({
+        uploadFileInChunks({
             parentId: this.recordId,
+            controllerName: this.controllerName,
             fileName: file.name,
             contentType: file.type,
             fileContent: encodeURIComponent(getchunk),
-            fileId: salesforceFileId
+            fileId: salesforceFileId,
+            finalChunk: finalChunk
         }).then(result => {
             console.log(result);
             salesforceFileId = result;
             startPosition = endPosition;
-            endPosition = Math.min(fileContent.length, startPosition + this.CHUNK_SIZE);
+            endPosition = Math.min(fileContent.length, startPosition + this.chunkSize);
+            let isFinalChunk = fileContent.length == endPosition ? true: false;
             if (startPosition < endPosition) {
-                this.fileUploadInChunks(file, fileContent, startPosition, endPosition, salesforceFileId);
+                this.fileUploadInChunks(file, fileContent, startPosition, endPosition, salesforceFileId, isFinalChunk);
             } else {
                 this.updateFileStatus(file, true);
                 // Showing Success message after uploading
@@ -242,7 +267,6 @@ export default class FileUpload extends LightningElement {
     registerEvents = () => {
 
         const dropArea = this.template.querySelector('[data-id="droparea"]');
-        console.log(dropArea);
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, this.preventDefaults)

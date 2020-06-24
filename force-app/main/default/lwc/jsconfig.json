@@ -5,6 +5,12 @@
         "paths": {
             "c/fileUpload": [
                 "fileUpload/fileUpload.js"
+            ],
+            "c/fileList": [
+                "fileList/fileList.js"
+            ],
+            "c/testFileUpload": [
+                "testFileUpload/testFileUpload.js"
             ]
         }
     },

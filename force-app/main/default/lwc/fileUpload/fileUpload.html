@@ -11,7 +11,7 @@
                         {title}
                     </h2>
                     <span class="slds-text_small">
-                        Choose or drag files from your device to upload!
+                        {subTitle}
                     </span>
                 </div>
             </div>
@@ -26,26 +26,26 @@
                     </div>
                 </div>
             </div>
-            <input type="file" data-id="ChooseFiles" name="file to uploder" multiple style="display: none;" onchange={handleSelectedFiles}>
+            <input type="file" data-id="ChooseFiles" name="file to uploder" multiple style="display: none;"
+                onchange={handleSelectedFiles}>
             <ul class="slds-m-around_medium">
                 <template for:each={selectedFilesToUpload} for:item="file">
                     <li key={file.name} class="slds-p-top_xx-small">
-                        <lightning-icon icon-name={file.stateIconClass} alternative-text={file.stateIconText} size="xx-small" class="slds-m-right_x-small"></lightning-icon>                             
-                        {file.name}  
-                        <!-- <template if:true={showSpinner}>
-                            <span style="display: inline-block;position:relative;width:30px;height:8px;" class="slds-m-right_small"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></span>
-                        </template>          -->
+                        <lightning-icon icon-name={file.stateIconClass} alternative-text={file.stateIconText}
+                            size="xx-small" class="slds-m-right_x-small"></lightning-icon>
+                        {file.name}
                     </li>
                 </template>
             </ul>
             <template if:true={errorMessage}>
-               <div class="slds-m-around_medium">{errorMessage}</div> 
+                <div class="slds-m-around_medium">{errorMessage}</div>
             </template>
             <template if:true={showSpinner}>
                 <lightning-spinner alternative-text="Uploading the file......" size="medium">
                 </lightning-spinner>
             </template>
         </div>
+        <!-- <c-file-list files={selectedFilesToUpload}></c-file-list> -->
         <footer>
             <ul class="slds-button-group-row slds-align_absolute-center slds-m-vertical_small">
                 <li class="slds-button-group-item">
