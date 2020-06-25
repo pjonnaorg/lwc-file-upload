@@ -3,3 +3,5 @@
 /.sfdx
 /.vscode
 /config
+
+node_modules
