@@ -14,7 +14,7 @@ Simple & easy to use drag and drog lightning web component
 Put this in any LWC html file
 `<c-file-upload parent-record-id={recordId}></c-file-upload>`
 
-#### required parameters
+#### Required parameters
 
 1. `parent-record-id` record id of the object where file has to uploaded into
 
