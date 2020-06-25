@@ -1,4 +1,4 @@
-# LWC Drag & drop File Uploader
+# LWC drag & drop file uploader
 
 Simple & easy to use drag and drog lightning web component 
 
@@ -13,6 +13,7 @@ Simple & easy to use drag and drog lightning web component
 ## UI
 
 ![Image](https://i.ibb.co/FbmDjRD/EdRB0Xw.png)
+#### more images - https://imgur.com/a/g2G1JuN
 
 ## How to use it
 
