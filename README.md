@@ -9,6 +9,11 @@ Simple & easy to use drag and drog lightning web component
 3. Supports overrides for basic UI text, custom apex controller, chunk size and maximum file size
 4. Support file upload into custom stores other then salesforce  
 
+
+## UI
+
+![Image](https://imgur.com/EdRB0Xw)
+
 ## How to use it
 
 Put this in any LWC html file
