@@ -1,11 +1,5 @@
 public with sharing  class FileUploadController {
-    
-    @AuraEnabled
-    public static  Boolean uploadFile(Id parentId,String strfileName, String fileType, String fileContent){
 
-   
-        return true;
-    }
 
     @AuraEnabled
     public static Id uploadFileInChunks(Id parentId, String controllerName, String fileName, String contentType, String fileContent, String fileId, Boolean finalChunk) {
@@ -21,11 +15,11 @@ public with sharing  class FileUploadController {
     
         if(controllerName != null){
             IFileUpload uploader = (IFileUpload)Type.forName(controllerName).newInstance();
-            return uploader.uploadFileInChunks(parentId, fileName, contentType, fileContent, fileId);
+            return uploader.uploadFileInChunks(parentId, fileName, contentType, fileContent, fileId, finalChunk);
         }
         else {            
             IFileUpload uploader = (IFileUpload)Type.forName('SalesforceFileUpload').newInstance();
-            return uploader.uploadFileInChunks(parentId, fileName, contentType, fileContent, fileId);
+            return uploader.uploadFileInChunks(parentId, fileName, contentType, fileContent, fileId, finalChunk);
         }
 
     }
