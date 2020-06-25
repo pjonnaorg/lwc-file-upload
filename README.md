@@ -12,7 +12,7 @@ Simple & easy to use drag and drog lightning web component
 
 ## UI
 
-![Image](https://imgur.com/EdRB0Xw)
+![Image](https://i.ibb.co/FbmDjRD/EdRB0Xw.png)
 
 ## How to use it
 
