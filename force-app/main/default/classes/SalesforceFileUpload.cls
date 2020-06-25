@@ -1,6 +1,7 @@
 public with sharing  class SalesforceFileUpload  implements IFileUpload {
     
 
+
     public Id uploadFileInChunks(Id parentId, String fileName, String contentType, String fileContent, String fileId, Boolean finalChunk) {
 
         if (fileId == '' || fileId == null) {
