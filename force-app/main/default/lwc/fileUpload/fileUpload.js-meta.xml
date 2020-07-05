@@ -2,8 +2,8 @@
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>48.0</apiVersion>
     <isExposed>true</isExposed>
-    <masterLabel>File Upload</masterLabel>
-    <description>Generic File Upload Component</description>
+    <masterLabel>Generic file uploader</masterLabel>
+    <description>Generic drag and drop file upload component</description>
     <targets>
       <target>lightning__AppPage</target>
       <target>lightning__RecordPage</target>
