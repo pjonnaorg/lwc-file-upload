@@ -4,3 +4,7 @@
 //     SFDX: Execute SOQL Query with Currently Selected Text
 
 SELECT Id, Name FROM Account;
+
+ApexClass[])[FIND :'IFileUpload' 
+                        IN ALL FIELDS
+                        RETURNING ApexClass(Id, Name)][0];

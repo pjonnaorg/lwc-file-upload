@@ -1,7 +1,6 @@
 import { LightningElement, api, track } from 'lwc';
 import { isNarrow, proto, isBase } from './fileUploadUtil';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import uploadFile from '@salesforce/apex/FileUploadController.uploadFile';
 import uploadFileInChunks from '@salesforce/apex/FileUploadController.uploadFileInChunks';
 //import displayUploadedFiles from '@salesforce/apex/AWSFileUploadController.displayUploadedFiles'; 
 
